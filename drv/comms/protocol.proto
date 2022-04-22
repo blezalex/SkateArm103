@@ -1,0 +1,166 @@
+syntax = "proto2";
+option java_package = "proto";
+
+// CMD format:
+// Byte 0: Fixed 0x1 protocol header/version
+// Byte 1: packet length 3-255 (inclues all transfered bytes: header, len,
+// msgId, msgBody and CRC16)
+// Byte 2: message id
+// Byte 3-n message body
+// Byte n-1 CRC16
+
+enum RequestId {
+  MSG_NONE = 0;
+  READ_CONFIG = 1;
+  WRITE_CONFIG = 2;
+  GET_STATS = 3;
+  CALLIBRATE_ACC = 4;
+  SAVE_CONFIG = 5;
+  GET_DEBUG_BUFFER = 6;
+  SET_DEBUG_STREAM_ID = 7;
+}
+
+enum ReplyId {
+  NO_REPLY = 0;
+  GENERIC_OK = 1;
+  GENERIC_FAIL = 2;
+  STATS = 3;
+  CONFIG = 4;
+  CRC_MISMATCH = 5;
+  DEBUG_BUFFER = 6;
+}
+
+message Config {
+  message Callibration {
+    required int32 acc_x = 1 [ default = 0 ];
+    required int32 acc_y = 2 [ default = 0 ];
+    required int32 acc_z = 3 [ default = 0 ];
+
+    optional float x_offset = 4 [ default = 0 ];
+    optional float y_offset = 5 [ default = 0 ];
+    optional float z_offset = 6 [ default = 0 ];
+  }
+
+  optional Callibration callibration = 1;
+
+  message PidConfig {
+    required float p = 1 [ default = 1200 ];
+    required float d = 2 [ default = 0.65 ];
+    required float i = 3 [ default = 0.1 ];
+    required float max_i = 4 [ default = 3 ];
+    optional float i_expo = 13 [ default = 0 ];
+  }
+
+  required PidConfig pitch_pid = 2;
+  
+  required PidConfig roll_pid = 8;
+
+  required PidConfig yaw_pid = 9;
+
+  message FootPadSettings {
+    required float filter_rc = 1 [ default = 0.05 ];
+    required int32 min_level_to_start = 2 [ default = 3300 ];
+    required int32 min_level_to_continue = 3 [ default = 2000 ];
+    required int32 shutoff_delay_ms = 4 [ default = 100 ];
+  }
+
+  required FootPadSettings foot_pad = 3;
+
+  message BalancingConfig {
+    // min value is 1 = linear
+    required float balance_expo = 1 [ default = 0.15 ];
+
+    // scale input angel in deg by deviding by 'balance_angle_scaling'
+    required float balance_angle_scaling = 2 [ default = 15 ];
+
+    required int32 max_start_angle_steer = 3 [ default = 15 ];
+    required int32 shutoff_angle_steer = 4 [ default = 40 ];
+    required int32 shutoff_angle_drive = 5 [ default = 14 ];
+
+    required int32 max_update_limiter = 6 [ default = 300 ];
+    required float output_lpf_rc = 7 [ default = 1 ];
+
+    required int32 balance_d_param_limiter = 8 [ default = 300 ];
+
+    // 100hz = 0.385
+    // 50hz = 0.24
+    // 40hz = 0.20
+    // 30hz = 0.158
+    // 20hz = 0.11
+    // 10hz = 0.06
+    // 1hz  = 0.006
+    required float balance_d_param_lpf_rc = 9 [ default = 0.15 ];
+
+    // MPU6050_LPF_256HZ 0, MPU6050_LPF_188HZ 1, MPU6050_LPF_98HZ 2,
+    // MPU6050_LPF_42HZ 3, MPU6050_LPF_20HZ 4, MPU6050_LPF_10HZ 5,
+    // MPU6050_LPF_5HZ  6 Reboot required to change
+    required uint32 global_gyro_lpf = 10 [ default = 2 ];
+
+    optional float imu_beta = 11 [ default = 0.02 ];
+
+    // 0 - exponential, 1 natural, 2 - poly
+    optional int32 expo_type = 12 [ default = 0 ];
+
+    // If non-zero, balance controler sends current control requests via usart
+    // (keep PPM wire disconnected.)
+    optional float usart_control_scaling = 13 [ default = 0 ];
+  }
+
+  required BalancingConfig balance_settings = 4;
+
+  message PusbackSettings {
+    required int32 min_speed_erpm = 1 [ default = 1000 ];
+    required int32 push_angle = 2 [ default = 5 ];
+
+    required float push_raise_speed_deg_sec = 3 [ default = 0.5 ];
+    required float push_release_speed_deg_sec = 4 [ default = 0.2 ];
+  }
+  
+  message Misc {
+    // 0-1, 1 = 100% of output power = no warning at all
+    required float throttle_threshold = 7 [ default = 0.75 ];
+    required float throttle_rc = 6 [ default = 0.05 ];
+
+    // Get pushback/beep if duty_cycle exceeds this threshold
+    optional float duty_threshold = 8 [ default = 0.75 ];
+    optional float duty_rc = 9 [ default = 0.25 ];
+
+    // Get pushback/beep if erpm exceeds this threshold
+    optional int32 erpm_threshold = 10 [ default = 6000 ];
+    optional float erpm_rc = 11 [ default = 0.25 ];
+
+    // Get pushback/beep if voltage drops below this threshold
+    optional float low_volt_threshold = 12 [ default = 45 ];
+    optional float volt_rc = 13 [ default = 0.25 ];
+
+    // add current erpm to throttle input with 'speed_input_mixin' weight
+    optional float speed_input_mixin = 14 [ default = 0 ];
+  }
+  
+  message FloatSettings  {
+  	required float p_scaler = 1 [ default = 1 ];
+  	required float p_reconcile_rate = 2 [ default = 0.001 ];
+  }
+  
+  required Misc misc = 5;
+  optional PusbackSettings  pushback = 6;
+  
+  optional FloatSettings floating = 7;
+}
+
+message Stats {
+  required float batt_voltage = 1;
+  required float batt_current = 2;
+  required float motor_current = 3;
+  required float speed = 5;
+  required float distance_traveled = 6;
+  required float drive_angle = 7;
+  required float stear_angle = 8;
+
+  required uint32 pad_pressure1 = 9;
+  required uint32 pad_pressure2 = 10;
+
+  required float motor_duty = 11;
+  required float esc_temp = 12;
+  required float motor_temp = 13;
+}

@@ -1,0 +1,13 @@
+.vscode/*
+BalancingController/Debug/*
+BalancingController/BalancingController.elf.xcodeproj/project.pbxproj
+BalancingController.comemgui
+BalancingController.comarker
+BalancingController.cogui
+
+build/*
+*.su
+*.o
+
+drv/comms/protocol.pb.c
+drv/comms/protocol.pb.h
