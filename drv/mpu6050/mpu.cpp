@@ -1,17 +1,18 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#include "stm32f10x.h"
-#include "stm32f10x_gpio.h"
-#include "stm32f10x_rcc.h"
-#include "stm32f10x_i2c.h"
-#include "stm32f10x_dma.h"
-#include "stm32f10x_exti.h"
-#include "misc.h"
+#include "../../cmsis_boot/stm32f10x.h"
+#include "../../stm_lib/inc/stm32f10x_gpio.h"
+#include "../../stm_lib/inc/stm32f10x_rcc.h"
+#include "../../stm_lib/inc/stm32f10x_i2c.h"
+#include "../../stm_lib/inc/stm32f10x_dma.h"
+#include "../../stm_lib/inc/stm32f10x_exti.h"
+#include "../../stm_lib/inc/misc.h"
 #include "mpu.hpp"
 #include "mpu6050_registers.hpp"
-#include "io/i2c.hpp"
-#include "global.h"
+#include "../../io/i2c.hpp"
+#include "../../global.h"
+#include "../../utils.h"
 
 
 #define MPU6050_ADDRESS     0x68u
@@ -34,10 +35,6 @@
 #endif
 
 unsigned char MPU6050_Rx_Buffer[6+2+6];
-
-#ifndef BOARD_ROTATION_MACRO
-#define BOARD_ROTATION_MACRO(XYZ)  {}
-#endif
 
 volatile bool data_processed = true;
 
@@ -116,6 +113,9 @@ void Mpu::handleRawData(uint8_t* rawData) {
 	handleGyroData(update.gyro, rawData+8); // first 6 are ACC data, then 2 temperature and next 6 are gyro data
 	handleAccData(update.acc, update.gyro, rawData);
 
+	RotateVectorUsingMatrix(update.gyro, imu_rotation);
+	RotateVectorUsingMatrix(update.acc, imu_rotation);
+
 	if (listener_ != nullptr) {
 		listener_->processUpdate(update);
 	}
@@ -137,7 +137,6 @@ void Mpu::handleAccData(int16_t* acc, int16_t* gyro, uint8_t* rawData) {
 	acc[0] = -getAccVal(rawData, 1);
 	acc[1] = -getAccVal(rawData, 0);
 	acc[2] =  getAccVal(rawData, 2);
-	BOARD_ROTATION_MACRO(acc);
 	if (accCalibrationIterationsLeft_ > 0) {
 		if (--accCalibrationIterationsLeft_ == 0) {
 			accZeroOffsets_[0] = acc[0];
@@ -158,7 +157,6 @@ void Mpu::handleGyroData(int16_t* gyro,  uint8_t* rawData) {
 	gyro[0] =  getGyroVal(rawData, 1);
 	gyro[1] =  getGyroVal(rawData, 0);
 	gyro[2] = -getGyroVal(rawData, 2);
-	BOARD_ROTATION_MACRO(gyro);
 	if (calibrationComplete()) {
 		applyZeroOffset(gyro, gyroZeroOffsets_);
 	}
@@ -223,4 +221,10 @@ void Mpu::init(uint8_t lpfSettings) {
 	MPU_DmaInit();
 
 	gyroCalibrationIterationsLeft_ = GYRO_CALIBRATION_ITERATIONS_REQUIRED;
+	setAccGyroOrientation(0, 0, 0);
+}
+
+
+void Mpu::setAccGyroOrientation(float roll, float pitch, float yaw) {
+	ComputeRotationMatrix(imu_rotation, deg_to_rad(roll), deg_to_rad(pitch), deg_to_rad(yaw));
 }

@@ -6,7 +6,7 @@
 #include "../global.h"
 #include "../drv/mpu6050/mpu.hpp"
 #include "MadgwickAHRS.hpp"
-#include "../drv/comms/protocol.pb.h"
+#include "../drv/comms/config.pb.h"
 
 #define MADGWICK
 
@@ -23,6 +23,9 @@ public:
 	void compute(const MpuUpdate& update, bool init = false);
 
 	volatile float angles[2];
+
+	MpuUpdate last_update_;
+
 private:
 
 #ifdef MADGWICK
@@ -30,6 +33,7 @@ private:
 #else
 	float accCompensatedVector_[3];
 #endif
+
 
 	const Config* config_;
 	DISALLOW_COPY_AND_ASSIGN(IMU);

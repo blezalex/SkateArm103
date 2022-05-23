@@ -1,6 +1,6 @@
 
 #include "settings.hpp"
-#include "drv/comms/protocol.pb.h"
+#include "drv/comms/config.pb.h"
 #include <pb_encode.h>
 #include <pb_decode.h>
 #include "stm32f10x_flash.h"

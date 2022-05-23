@@ -1,7 +1,7 @@
 #ifndef _PID_H
 #define _PID_H
 #include "global.h"
-#include "drv/comms/protocol.pb.h"
+#include "drv/comms/config.pb.h"
 
 class PidController {
 public:
@@ -19,7 +19,7 @@ public:
 
 	float compute(float error, float de) {
 		// Cumulative sumI changes slowly, it is OK to use I value from previous iteration here.
-		float output =  error * _params->p + de * _params->d + applyExpoPoly(_sumI,_params->i_expo);
+		float output =  error * _params->p + de * _params->d + _sumI;
 
 		float ierror = constrain(error, -_params->max_i, _params->max_i);
 		ierror = error * _params->i;

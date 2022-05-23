@@ -1,0 +1,56 @@
+syntax = "proto2";
+
+message Config {
+  message Callibration {
+    optional float x_offset = 4 [ default = 0 ];
+    optional float y_offset = 5 [ default = 0 ];
+    optional float z_offset = 6 [ default = 0 ];
+  }
+
+  optional Callibration callibration = 1;
+
+  message PidConfig {
+    required float p = 1 [ default = 1200 ];
+    required float d = 2 [ default = 0.65 ];
+    required float i = 3 [ default = 0.1 ];
+    required float max_i = 4 [ default = 3 ];
+  }
+
+  required PidConfig balance_pid = 2;
+  
+  required PidConfig yaw_pid = 3;
+
+  message BalancingConfig {
+    // min value is 1 = linear
+    required float balance_expo = 1 [ default = 0.15 ];
+
+    // MPU6050_LPF_256HZ 0, MPU6050_LPF_188HZ 1, MPU6050_LPF_98HZ 2,
+    // MPU6050_LPF_42HZ 3, MPU6050_LPF_20HZ 4, MPU6050_LPF_10HZ 5,
+    // MPU6050_LPF_5HZ  6 Reboot required to change
+    required uint32 global_gyro_lpf = 2 [ default = 2 ];
+
+    required float imu_beta = 3 [ default = 0.02 ];
+    
+    required int32 max_control_angle = 4 [ default = 30 ];
+    required int32 max_rotation_rate = 5 [ default = 360 ];
+    
+    required int32 max_current = 6 [ default = 25 ];
+
+    required float rc_lpf = 7 [ default = 0.007 ];
+    
+    optional int32 stop_balance_angle = 8 [ default = 10 ]; 
+    
+    optional float roll_yaw_mix = 9 [ default = 0 ];
+    optional float speed_tilt_yaw_mult = 10 [ default = 0 ];
+
+    optional float output_lpf_rc = 11 [ default = 150 ];
+
+    optional int32 max_start_angle_steer = 12 [ default = 15 ];
+    optional int32 shutoff_angle_steer = 13 [ default = 40 ];
+    optional int32 shutoff_angle_drive = 14 [ default = 14 ];
+  }
+
+  required BalancingConfig balance_settings = 4;
+
+  optional PidConfig rate_pid = 5;
+}

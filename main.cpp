@@ -24,7 +24,6 @@
 #include "drv/vesc/vesc.hpp"
 #include "global.h"
 #include "guards/angleGuard.hpp"
-#include "guards/footpadGuard.hpp"
 #include "imu/imu.hpp"
 #include "io/genericOut.hpp"
 #include "io/i2c.hpp"
@@ -95,13 +94,6 @@ uint8_t read_pos = 0;
 static uint8_t debug[200];
 
 static Communicator comms;
-
-void applyCalibrationConfig(const Config &cfg, Mpu *accGyro) {
-  int16_t acc_offsets[3] = {(int16_t)cfg.callibration.acc_x,
-                            (int16_t)cfg.callibration.acc_y,
-                            (int16_t)cfg.callibration.acc_z};
-  accGyro->applyAccZeroOffsets(acc_offsets);
-}
 
 void initRx() {
 	/* GPIO configuration */
@@ -195,6 +187,9 @@ void initCAN() {
 }
 
 
+extern uint8_t cf_data[] asm("_binary_build_descriptor_pb_bin_deflate_start");
+extern uint8_t cf_data_e[] asm("_binary_build_descriptor_pb_bin_deflate_end");
+
 int main(void) {
   SystemInit();
 
@@ -228,8 +223,8 @@ int main(void) {
   Config cfg = Config_init_default;
   if (readSettingsFromFlash(&cfg)) {
     const char msg[] = "Config OK\n";
+    accGyro.setAccGyroOrientation(cfg.callibration.x_offset, cfg.callibration.y_offset, cfg.callibration.z_offset);
     Serial1.Send((uint8_t *)msg, sizeof(msg));
-    applyCalibrationConfig(cfg, &accGyro);
   } else {
     cfg = Config_init_default;
     const char msg[] = "Config DEFAULT\n";
@@ -277,11 +272,6 @@ int main(void) {
   int guards_count = sizeof(guards) / sizeof(Guard *);
 
   VescComm vesc(&Serial2);
-  LPF erpm_lpf(&cfg.misc.erpm_rc);
-  LPF v_in_lpf(&cfg.misc.volt_rc);
-  LPF duty_lpf(&cfg.misc.duty_rc);
-
-
 
   static BoardController main_ctrl(&cfg, imu, status_led, beeper, guards,
                             guards_count, green_led, &vesc);
@@ -361,16 +351,13 @@ int main(void) {
         Config_Callibration c = cfg.callibration;
         bool good =
             readSettingsFromBuffer(&cfg, comms.data(), comms.data_len());
-        if (good)
+        if (good) {
           comms.SendMsg(ReplyId_GENERIC_OK);
+          accGyro.setAccGyroOrientation(cfg.callibration.x_offset, cfg.callibration.y_offset, cfg.callibration.z_offset);
+        }
         else
-          comms.SendMsg(ReplyId_GENERIC_FAIL);
-        if (!cfg.has_callibration)  // use own calibration if not received one.
         {
-          cfg.callibration = c;
-          cfg.has_callibration = true;
-        } else {
-          applyCalibrationConfig(cfg, &accGyro);
+          comms.SendMsg(ReplyId_GENERIC_FAIL);
         }
         break;
       }
@@ -379,15 +366,19 @@ int main(void) {
         Stats stats = Stats_init_default;
         stats.drive_angle = imu.angles[ANGLE_DRIVE];
         stats.stear_angle = imu.angles[ANGLE_STEER];
-        stats.pad_pressure1 = main_ctrl.right;
-        stats.pad_pressure1 = main_ctrl.fwd;
-        stats.batt_current = main_ctrl.motor1_.get();
+        stats.acc0 = imu.last_update_.acc[0];
+        stats.acc1 = imu.last_update_.acc[1];
+        stats.acc2 = imu.last_update_.acc[2];
+        stats.gyro0 = imu.last_update_.gyro[0];
+        stats.gyro1 = imu.last_update_.gyro[1];
+        stats.gyro2 = imu.last_update_.gyro[2];
+
         stats.batt_voltage = main_ctrl.motor2_.get();
 //        stats.batt_current = vesc.mc_values_.avg_input_current;
 //        stats.batt_voltage = vesc.mc_values_.v_in;
         stats.motor_current = vesc.mc_values_.avg_motor_current;
         stats.distance_traveled = vesc.mc_values_.tachometer_abs;
-        stats.speed = vesc.mc_values_.rpm;
+        stats.speed1 = vesc.mc_values_.rpm;
         stats.motor_duty = vesc.mc_values_.duty_now;
         stats.esc_temp = vesc.mc_values_.temp_mos_filtered;
         stats.motor_temp = vesc.mc_values_.temp_motor_filtered;
@@ -410,32 +401,14 @@ int main(void) {
       	}
       	break;
 
-
-      case RequestId_CALLIBRATE_ACC:
-        comms.SendMsg(ReplyId_GENERIC_OK);
-        accGyro.callibrateAcc();
-        while (!accGyro.accCalibrationComplete()) IWDG_ReloadCounter();
-        cfg.has_callibration = true;
-        cfg.callibration.acc_x = accGyro.getAccOffsets()[0];
-        cfg.callibration.acc_y = accGyro.getAccOffsets()[1];
-        cfg.callibration.acc_z = accGyro.getAccOffsets()[2];
-        comms.SendMsg(ReplyId_GENERIC_OK);
-        break;
-
       case RequestId_SAVE_CONFIG:
         saveSettingsToFlash(cfg);
         comms.SendMsg(ReplyId_GENERIC_OK);
         break;
-    }
 
-    if (vesc.update() == (uint8_t)VescComm::COMM_PACKET_ID::COMM_GET_VALUES) {
-      // got a stats update; recalculate smoothed values
-      // Runs at 20hz (values requested from balance controller to sync with
-      // current control over USART request.
-      vesc.mc_values_.erpm_smoothed = erpm_lpf.compute(vesc.mc_values_.rpm);
-      vesc.mc_values_.v_in_smoothed = v_in_lpf.compute(vesc.mc_values_.v_in);
-      vesc.mc_values_.duty_smoothed =
-          duty_lpf.compute(vesc.mc_values_.duty_now);
+      case RequestId_GET_CONFIG_DESCRIPTOR:
+        comms.SendMsg(ReplyId_CONFIG_DESCRIPTOR, (uint8_t*)cf_data, (int)cf_data_e - (int)cf_data);
+        break;
     }
   }
 }

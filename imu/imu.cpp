@@ -21,6 +21,8 @@
 void IMU::compute(const MpuUpdate& update, bool init) {
 //	GPIOA->BSRR = GPIO_Pin_11;
 
+last_update_  = update;
+
 	const float MW_GYRO_SCALE = (4 / 65.5);   //MPU6050 and MPU3050   65.5 LSB/(deg/s) and we ignore the last 2 bits
 	if (init) {
 		// While gyro is getting initialized its data is invalid - ignore gyro.
@@ -31,8 +33,8 @@ void IMU::compute(const MpuUpdate& update, bool init) {
 		mw_.updateIMU(update.gyro[0] * MW_GYRO_SCALE, update.gyro[1] * MW_GYRO_SCALE, update.gyro[2] * MW_GYRO_SCALE, update.acc[0] / (float)ACC_1G, update.acc[1] / (float)ACC_1G, update.acc[2] / (float)ACC_1G, false);
 	}
 
-	angles[0] = mw_.getRoll() + config_->callibration.x_offset; // TODO: replace with proper vector rotation in MpuUpdate (so pid controler sees rotated gyro input too)
-	angles[1] = - mw_.getPitch() + config_->callibration.y_offset;
+	angles[0] = mw_.getRoll();
+	angles[1] = - mw_.getPitch();
 
 //	GPIOA->BRR = GPIO_Pin_11;
 }

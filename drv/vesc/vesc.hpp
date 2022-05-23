@@ -14,10 +14,6 @@ typedef struct {
 	float amp_hours_charged;
 	int32_t tachometer;
 	int32_t tachometer_abs;
-
-	float v_in_smoothed;
-	float duty_smoothed;
-	float erpm_smoothed;
 } mc_values;
 
 class VescComm {

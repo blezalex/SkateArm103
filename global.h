@@ -12,10 +12,6 @@
 // IMU is using right hand coordinate system, it tracks gravity vector and calculates angle between gravity vector and the board frame.
 // Normal orientation - X forward, Y right Z down
 
-//#define BOARD_ROTATION_MACRO BOARD_ROTATION_UPSIDE_DOWN_X
-
-#define BOARD_ROTATION_UPSIDE_DOWN_X(XYZ) XYZ[1]*=-1; XYZ[2]*=-1;  // rotated 180 deg around X axis
-
 
 // ****** start mode settings *********/
 #define START_MAX_POWER 300 // [-START_MAX_POWER: +START_MAX_POWER] out of MOTOR_CMD_RANGE
@@ -60,6 +56,6 @@ inline float applyExpoPoly(float x, float k) {
 	return sgn(x) * absx/(1+k*(1-absx));
 }
 
-constexpr inline float radians(float angle) {
+constexpr inline float deg_to_rad(float angle) {
 	return angle * M_PI / 180;
 }

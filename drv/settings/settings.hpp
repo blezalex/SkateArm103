@@ -1,6 +1,6 @@
 #pragma once
 
-#include "drv/comms/protocol.pb.h"
+#include "drv/comms/config.pb.h"
 #include "io/usart.hpp"
 
 bool saveSettingsToFlash(const Config& config);
