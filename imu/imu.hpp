@@ -34,7 +34,6 @@ private:
 	float accCompensatedVector_[3];
 #endif
 
-
 	const Config* config_;
 	DISALLOW_COPY_AND_ASSIGN(IMU);
 };

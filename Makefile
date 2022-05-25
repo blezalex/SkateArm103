@@ -52,12 +52,6 @@ ${BUILD_DIR}/BalancingController.hex: ${BUILD_DIR}/BalancingController.elf
 	arm-none-eabi-objcopy -O ihex ${BUILD_DIR}/BalancingController.elf $@
 
 
-
-# TODO1: Port generate bat.
-# TODO2: Add program step
-# TODO3: Figure out CooCox references.
-
-
 .PHONY: clean program
 clean:
 	rm -r $(BUILD_DIR)

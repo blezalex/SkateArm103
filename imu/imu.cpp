@@ -21,7 +21,7 @@
 void IMU::compute(const MpuUpdate& update, bool init) {
 //	GPIOA->BSRR = GPIO_Pin_11;
 
-last_update_  = update;
+	last_update_  = update;
 
 	const float MW_GYRO_SCALE = (4 / 65.5);   //MPU6050 and MPU3050   65.5 LSB/(deg/s) and we ignore the last 2 bits
 	if (init) {
