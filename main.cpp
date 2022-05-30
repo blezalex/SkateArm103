@@ -223,7 +223,6 @@ int main(void) {
   Config cfg = Config_init_default;
   if (readSettingsFromFlash(&cfg)) {
     const char msg[] = "Config OK\n";
-    accGyro.setAccGyroOrientation(cfg.callibration.x_offset, cfg.callibration.y_offset, cfg.callibration.z_offset);
     Serial1.Send((uint8_t *)msg, sizeof(msg));
   } else {
     cfg = Config_init_default;
@@ -252,6 +251,7 @@ int main(void) {
                     &angle_guard);  // wait for angle. Wait for pads too?
   accGyro.setListener(&waiter);
   accGyro.init(cfg.balance_settings.global_gyro_lpf);
+  accGyro.setAccGyroOrientation(cfg.callibration.x_offset, cfg.callibration.y_offset, cfg.callibration.z_offset);
 
   GenericOut beeper(RCC_APB2Periph_GPIOA, GPIOA, GPIO_Pin_12, true);
   beeper.init(true);
